@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import toast from 'react-hot-toast'
-import { loginWithEmail } from '../app/actions'
+import { loginWithEmail } from '@/app/actions'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
