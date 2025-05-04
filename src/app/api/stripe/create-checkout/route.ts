@@ -94,6 +94,7 @@ export async function POST(request: Request) {
         id: checkoutSession.id,
         mode: checkoutSession.mode,
         email: checkoutSession.customer_email,
+        clientReferenceId: checkoutSession.client_reference_id,
         url: checkoutSession.url
       });
       
