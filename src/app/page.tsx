@@ -12,7 +12,15 @@ export default function Home() {
 
   // Get the current origin when component mounts
   useEffect(() => {
-    setSiteUrl(window.location.origin);
+    // Check if we're in production based on the hostname
+    // This makes sure we don't use localhost in production
+    if (window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1') {
+      setSiteUrl(window.location.origin);
+    } else {
+      // In production, use the actual deployed domain
+      setSiteUrl('https://beep.money'); // Replace with your actual domain
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +38,7 @@ export default function Home() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Use the current site URL to ensure it works in both dev and production
+          // Use the site URL that was determined in useEffect
           emailRedirectTo: `${siteUrl}/auth/callback`,
         },
       });
