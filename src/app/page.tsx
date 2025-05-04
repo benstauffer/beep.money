@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,12 @@ import { supabase } from '@/lib/supabase';
 export default function Home() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [siteUrl, setSiteUrl] = useState('');
+
+  // Get the current origin when component mounts
+  useEffect(() => {
+    setSiteUrl(window.location.origin);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +30,8 @@ export default function Home() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          // Use the current site URL to ensure it works in both dev and production
+          emailRedirectTo: `${siteUrl}/auth/callback`,
         },
       });
       

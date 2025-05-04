@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // Redirect to the dashboard regardless of the outcome
-  // The supabase client will handle the session state
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`);
+  // Get the base URL from the request URL
+  const baseUrl = requestUrl.origin;
+
+  // Redirect to the dashboard using the same origin as the request
+  return NextResponse.redirect(`${baseUrl}/dashboard`);
 } 
