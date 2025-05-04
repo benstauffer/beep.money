@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Toaster } from 'react-hot-toast'
 import toast from 'react-hot-toast'
-import { LogOut } from 'lucide-react'
+import { LogOut, CreditCard, Check, Lock } from 'lucide-react'
 import { signOut } from '@/app/actions'
 
 interface DashboardContentProps {
@@ -14,6 +14,7 @@ interface DashboardContentProps {
 
 export default function DashboardContent({ userEmail, userId }: DashboardContentProps) {
   const searchParams = useSearchParams()
+  const [hasSubscription, setHasSubscription] = useState(false)
 
   useEffect(() => {
     // Check URL parameters for success/cancel messages from Stripe
@@ -22,6 +23,7 @@ export default function DashboardContent({ userEmail, userId }: DashboardContent
 
     if (success) {
       toast.success('Subscription successful! Thank you for your support.')
+      setHasSubscription(true)
     }
 
     if (canceled) {
@@ -53,12 +55,50 @@ export default function DashboardContent({ userEmail, userId }: DashboardContent
 
       <main className="flex-1">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-semibold mb-4">Welcome, {userEmail}</h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              You are now logged in. This dashboard will show your spending updates and financial insights.
-            </p>
-          </div>
+          {hasSubscription ? (
+            // Pro user content
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+              <h2 className="text-2xl font-semibold mb-4">Welcome, {userEmail}</h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                You are now logged in. This dashboard will show your spending updates and financial insights.
+              </p>
+            </div>
+          ) : (
+            // Premium features card for non-subscribers
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-6">
+              <div className="text-center mb-8">
+                <Lock className="h-12 w-12 mx-auto text-blue-500/50 mb-4" />
+                <h2 className="text-2xl font-semibold mb-4">Unlock Premium Features</h2>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Subscribe to access powerful financial tracking tools, connect your bank accounts, 
+                  and get detailed spending analytics.
+                </p>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                  <Check className="h-5 w-5 text-blue-500 mr-3" />
+                  <span>Bank account connections</span>
+                </div>
+                <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                  <Check className="h-5 w-5 text-blue-500 mr-3" />
+                  <span>Daily spending summaries</span>
+                </div>
+                <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                  <Check className="h-5 w-5 text-blue-500 mr-3" />
+                  <span>Weekly and monthly spending breakdowns</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => window.location.href = '/subscribe'}
+                className="w-full flex items-center justify-center px-4 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Subscribe Now
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>
