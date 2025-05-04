@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
@@ -8,20 +8,6 @@ import { supabase } from '@/lib/supabase';
 export default function Home() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [siteUrl, setSiteUrl] = useState('');
-
-  // Get the current origin when component mounts
-  useEffect(() => {
-    // Check if we're in production based on the hostname
-    // This makes sure we don't use localhost in production
-    if (window.location.hostname === 'localhost' || 
-        window.location.hostname === '127.0.0.1') {
-      setSiteUrl(window.location.origin);
-    } else {
-      // In production, use the actual deployed domain
-      setSiteUrl('https://beep.money'); // Replace with your actual domain
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +24,7 @@ export default function Home() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Use the site URL that was determined in useEffect
-          emailRedirectTo: `${siteUrl}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
       
