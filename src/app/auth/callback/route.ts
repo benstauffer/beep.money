@@ -18,5 +18,5 @@ export async function GET(request: NextRequest) {
 
   // Redirect to the dashboard regardless of the outcome
   // The supabase client will handle the session state
-  return NextResponse.redirect(new URL('/dashboard', request.url));
+  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`);
 } 
