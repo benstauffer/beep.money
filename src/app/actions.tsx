@@ -4,6 +4,18 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../utils/supabase/server'
 
+function getRedirectUrl(path: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL environment variable is not set')
+  }
+  // Remove trailing slash from base URL if it exists
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  // Ensure path starts with a slash
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  return `${cleanBaseUrl}${cleanPath}`
+}
+
 export async function loginWithEmail(formData: FormData) {
   const supabase = await createClient()
 
@@ -11,14 +23,11 @@ export async function loginWithEmail(formData: FormData) {
   // in practice, you should validate your inputs
   const email = formData.get('email') as string
 
-  // Ensure we have the correct URL format
-  const redirectUrl = new URL('/api/auth/callback', process.env.NEXT_PUBLIC_APP_URL).toString()
-
   // Send a magic link to the user's email
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: redirectUrl,
+      emailRedirectTo: getRedirectUrl('/api/auth/callback'),
     },
   })
 
