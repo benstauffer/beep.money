@@ -3,9 +3,14 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+// Check required environment variables
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+}
+
 // Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as any,
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2025-04-30.basil',
 });
 
 const schema = z.object({

@@ -4,9 +4,14 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+// Check required environment variables
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+}
+
 // Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as any,
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2025-04-30.basil',
 });
 
 // Price IDs for each plan - these come from environment variables
