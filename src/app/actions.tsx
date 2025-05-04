@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../utils/supabase/server'
 
 function getRedirectUrl(path: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  // Ensure we're using the non-www version of the domain
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace('www.', '')
   if (!baseUrl) {
     throw new Error('NEXT_PUBLIC_APP_URL environment variable is not set')
   }
@@ -23,6 +24,8 @@ export async function loginWithEmail(formData: FormData) {
   // in practice, you should validate your inputs
   const email = formData.get('email') as string
 
+  console.log('Sending magic link with redirect to:', getRedirectUrl('/api/auth/callback'))
+
   // Send a magic link to the user's email
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -32,6 +35,7 @@ export async function loginWithEmail(formData: FormData) {
   })
 
   if (error) {
+    console.error('Error sending magic link:', error)
     return { error: error.message }
   }
 
