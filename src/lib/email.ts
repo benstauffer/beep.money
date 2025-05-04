@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { SpendingReportEmail, SpendingReportEmailProps } from '@/emails/SpendingReport';
 import { renderAsync } from '@react-email/components';
+import React from 'react';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -9,7 +10,7 @@ export async function sendSpendingReport(
   data: SpendingReportEmailProps
 ) {
   try {
-    const html = await renderAsync(SpendingReportEmail(data));
+    const html = await renderAsync(React.createElement(SpendingReportEmail, data));
     
     const { data: emailData, error } = await resend.emails.send({
       from: 'Beep Money <reports@beep.money>',

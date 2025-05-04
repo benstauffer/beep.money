@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { LogOut, Lock, Check, CreditCard } from 'lucide-react';
 
-export default function Dashboard() {
+// Separate component that uses useSearchParams
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<any>(null);
@@ -273,5 +274,16 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">
+      <div className="animate-pulse text-xl">Loading...</div>
+    </div>}>
+      <DashboardContent />
+    </Suspense>
   );
 } 

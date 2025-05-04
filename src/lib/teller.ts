@@ -16,6 +16,12 @@ const createHttpsAgent = () => {
       return undefined;
     }
     
+    // Check if files exist before reading
+    if (!fs.existsSync(path.resolve(certPath)) || !fs.existsSync(path.resolve(keyPath))) {
+      console.warn(`Teller certificate or private key file not found, using default HTTPS agent`);
+      return undefined;
+    }
+    
     return new https.Agent({
       cert: fs.readFileSync(path.resolve(certPath)),
       key: fs.readFileSync(path.resolve(keyPath)),
