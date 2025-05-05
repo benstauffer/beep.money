@@ -97,6 +97,56 @@ export type Database = {
           },
         ]
       }
+      teller_accounts: {
+        Row: {
+          account_id: string
+          account_name: string
+          account_subtype: string | null
+          account_type: string
+          created_at: string
+          enrollment_id: string
+          id: string
+          institution_name: string
+          last_four: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          account_name: string
+          account_subtype?: string | null
+          account_type: string
+          created_at?: string
+          enrollment_id: string
+          id?: string
+          institution_name: string
+          last_four?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string
+          account_subtype?: string | null
+          account_type?: string
+          created_at?: string
+          enrollment_id?: string
+          id?: string
+          institution_name?: string
+          last_four?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teller_accounts_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "teller_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teller_enrollments: {
         Row: {
           access_token: string

@@ -1,154 +1,122 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
-
-const enrollmentSchema = z.object({
-  accessToken: z.string(),
-  enrollmentId: z.string(),
-  userId: z.string(),
-  institutionName: z.string(),
-});
+import { createClient } from '@/utils/supabase/server';
+import { getAccounts } from '@/lib/teller';
 
 export async function POST(request: Request) {
   try {
-    console.log("API: Received enrollment request");
-    
-    // Parse request body
-    const body = await request.json();
-    console.log("API: Request body", JSON.stringify({
-      ...body,
-      accessToken: body.accessToken ? '[REDACTED]' : undefined
-    }));
-    
-    const { accessToken, enrollmentId, userId, institutionName } = enrollmentSchema.parse(body);
-    
-    // Verify we have a user ID
-    if (!userId) {
-      console.error("API: Missing user ID");
+    const { accessToken, enrollmentId, userId, institutionName } = await request.json();
+
+    if (!accessToken || !enrollmentId || !userId || !institutionName) {
       return NextResponse.json(
-        { message: 'User ID is required' },
+        { 
+          error: { 
+            code: 'missing_fields',
+            message: 'Missing required fields'
+          } 
+        },
         { status: 400 }
       );
     }
-    
-    // First, check if the user exists
-    const { data: userExists, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single();
-    
-    if (userError) {
-      console.error("API: Error checking user", userError);
-      
-      // If user doesn't exist, create the user
-      if (userError.code === 'PGRST116') {
-        const { error: createUserError } = await supabase
-          .from('users')
-          .insert([{ 
-            id: userId, 
-            email: 'unknown@example.com' // Placeholder, should be updated later
-          }]);
-        
-        if (createUserError) {
-          console.error("API: Failed to create user", createUserError);
-          return NextResponse.json(
-            { message: 'User does not exist and could not be created', error: createUserError.message },
-            { status: 500 }
-          );
-        }
-        
-        console.log("API: Created new user with ID", userId);
-      } else {
-        return NextResponse.json(
-          { message: 'Failed to check if user exists', error: userError.message },
-          { status: 500 }
-        );
-      }
-    }
-    
-    // Check if this enrollment already exists
-    const { data: existingEnrollment, error: findError } = await supabase
+
+    const supabase = await createClient();
+
+    // First, save the enrollment to the database without fetching accounts
+    // This ensures we capture the enrollment even if the Teller API call fails
+    const { data: enrollment, error: enrollmentError } = await supabase
       .from('teller_enrollments')
-      .select('id')
-      .eq('enrollment_id', enrollmentId)
-      .single();
-    
-    if (findError && findError.code !== 'PGRST116') {
-      console.error("API: Error checking existing enrollment", findError);
-      return NextResponse.json(
-        { message: 'Failed to check existing enrollment', error: findError.message },
-        { status: 500 }
-      );
-    }
-    
-    if (existingEnrollment) {
-      console.log("API: Updating existing enrollment", existingEnrollment.id);
-      
-      // Update the existing enrollment
-      const { error: updateError } = await supabase
-        .from('teller_enrollments')
-        .update({
-          access_token: accessToken,
-          institution_name: institutionName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingEnrollment.id);
-      
-      if (updateError) {
-        console.error("API: Error updating enrollment", updateError);
-        return NextResponse.json(
-          { message: 'Failed to update bank connection', error: updateError.message },
-          { status: 500 }
-        );
-      }
-      
-      return NextResponse.json(
-        { message: 'Bank connection updated successfully', enrollmentId: existingEnrollment.id },
-        { status: 200 }
-      );
-    }
-    
-    console.log("API: Creating new enrollment for user", userId);
-    
-    // Create a new enrollment
-    const { data: newEnrollment, error: createError } = await supabase
-      .from('teller_enrollments')
-      .insert([{
+      .insert({
         user_id: userId,
         enrollment_id: enrollmentId,
         access_token: accessToken,
         institution_name: institutionName,
-      }])
+      })
       .select()
       .single();
-    
-    if (createError) {
-      console.error("API: Error creating enrollment", createError);
+
+    if (enrollmentError) {
+      console.error('Error saving enrollment:', enrollmentError);
       return NextResponse.json(
-        { message: 'Failed to save bank connection', error: createError.message },
+        { 
+          error: { 
+            code: 'database_error',
+            message: 'Failed to save enrollment' 
+          } 
+        },
         { status: 500 }
       );
     }
-    
-    console.log("API: Successfully created enrollment", newEnrollment.id);
-    
-    return NextResponse.json(
-      { message: 'Bank connection saved successfully', enrollmentId: newEnrollment.id },
-      { status: 201 }
-    );
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error("API: Validation error", error.errors);
-      return NextResponse.json(
-        { message: 'Invalid request data', errors: error.errors },
-        { status: 400 }
-      );
+
+    // After saving the enrollment, attempt to fetch accounts
+    // But don't require this to succeed
+    try {
+      console.log('Enrollment saved. Fetching accounts with access token:', accessToken.substring(0, 10) + '...');
+      const accounts = await getAccounts(accessToken);
+      console.log(`Retrieved ${accounts.length} accounts from Teller`);
+
+      // Check if the teller_accounts table exists
+      const { error: tableCheckError } = await supabase
+        .from('teller_accounts')
+        .select('id')
+        .limit(1);
+
+      // Save each account to the database
+      if (!tableCheckError) {
+        // Create the accounts in the database
+        for (const account of accounts) {
+          const { error: accountError } = await supabase
+            .from('teller_accounts')
+            .insert({
+              user_id: userId,
+              enrollment_id: enrollment.id,
+              account_id: account.id,
+              account_name: account.name,
+              account_type: account.type,
+              account_subtype: account.subtype,
+              last_four: account.last_four,
+              institution_name: institutionName
+            });
+
+          if (accountError) {
+            console.error('Error saving account:', accountError, account);
+          }
+        }
+      } else {
+        console.log('teller_accounts table does not exist or is not accessible');
+      }
+
+      // Return success with account information 
+      return NextResponse.json({ 
+        success: true, 
+        enrollment, 
+        accounts: accounts.map(account => ({
+          id: account.id,
+          name: account.name,
+          type: account.type,
+          subtype: account.subtype,
+          last_four: account.last_four
+        }))
+      });
+      
+    } catch (tellerError: any) {
+      // If fetching accounts fails, still return success for the enrollment
+      console.error('Error fetching accounts from Teller. Continuing anyway:', tellerError.message);
+      
+      return NextResponse.json({ 
+        success: true, 
+        enrollment,
+        accounts: [],
+        warning: 'Enrollment was saved but could not fetch accounts. You may need to reconnect later.'
+      });
     }
-    
-    console.error("API: Unexpected error", error);
+  } catch (error: any) {
+    console.error('Error in enrollment route:', error);
     return NextResponse.json(
-      { message: 'An unexpected error occurred', error: error instanceof Error ? error.message : String(error) },
+      { 
+        error: { 
+          code: 'server_error',
+          message: 'Internal server error: ' + (error.message || 'Unknown error')
+        } 
+      },
       { status: 500 }
     );
   }

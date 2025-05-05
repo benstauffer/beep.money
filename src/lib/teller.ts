@@ -8,23 +8,54 @@ const TELLER_API_URL = process.env.TELLER_API_URL || 'https://api.teller.io';
 // Create an HTTPS agent with the certificate and private key for authentication
 const createHttpsAgent = () => {
   try {
-    const certPath = process.env.TELLER_CERTIFICATE_PATH;
-    const keyPath = process.env.TELLER_PRIVATE_KEY_PATH;
-    
-    if (!certPath || !keyPath) {
-      console.warn('Teller certificate or private key path not provided');
+    let cert: Buffer | undefined;
+    let key: Buffer | undefined;
+
+    // First try to get certificates from environment variables
+    const certBase64 = process.env.TELLER_CERTIFICATE_BASE64;
+    const keyBase64 = process.env.TELLER_PRIVATE_KEY_BASE64;
+
+    if (certBase64 && keyBase64) {
+      // If we have base64 encoded certs in env vars, decode them
+      cert = Buffer.from(certBase64, 'base64');
+      key = Buffer.from(keyBase64, 'base64');
+      console.log('Using certificates from environment variables');
+    } else {
+      // Fall back to file-based certificates
+      const certPath = process.env.TELLER_CERTIFICATE_PATH;
+      const keyPath = process.env.TELLER_PRIVATE_KEY_PATH;
+      
+      // Check for alternative names if the configured ones don't exist
+      if (certPath && !fs.existsSync(path.resolve(certPath))) {
+        const altCertPath = './certificate.pem';
+        if (fs.existsSync(path.resolve(altCertPath))) {
+          console.log('Using alternative certificate path:', altCertPath);
+          cert = fs.readFileSync(path.resolve(altCertPath));
+        }
+      } else if (certPath) {
+        cert = fs.readFileSync(path.resolve(certPath));
+      }
+      
+      if (keyPath && !fs.existsSync(path.resolve(keyPath))) {
+        const altKeyPath = './private_key.pem';
+        if (fs.existsSync(path.resolve(altKeyPath))) {
+          console.log('Using alternative private key path:', altKeyPath);
+          key = fs.readFileSync(path.resolve(altKeyPath));
+        }
+      } else if (keyPath) {
+        key = fs.readFileSync(path.resolve(keyPath));
+      }
+    }
+
+    if (!cert || !key) {
+      console.warn('Teller certificate or private key not found');
       return undefined;
     }
-    
-    // Check if files exist before reading
-    if (!fs.existsSync(path.resolve(certPath)) || !fs.existsSync(path.resolve(keyPath))) {
-      console.warn(`Teller certificate or private key file not found, using default HTTPS agent`);
-      return undefined;
-    }
-    
+
     return new https.Agent({
-      cert: fs.readFileSync(path.resolve(certPath)),
-      key: fs.readFileSync(path.resolve(keyPath)),
+      cert,
+      key,
+      rejectUnauthorized: true
     });
   } catch (error) {
     console.error('Error creating HTTPS agent for Teller API:', error);
@@ -44,17 +75,17 @@ const tellerApi = axios.create({
 // Set the authorization header for each request
 tellerApi.interceptors.request.use((config) => {
   if (config.headers) {
-    // For application API requests
-    // Check if auth property is present and explicitly set to false
-    // @ts-ignore - Custom property for our implementation
-    if (config.skipAuth === true) {
-      return config;
-    }
-    
     // For enrollment-specific API requests
     const token = config.headers['X-Teller-Token'];
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      // Use HTTP Basic Auth with the access token
+      // The token is the username, password is empty
+      config.auth = {
+        username: token,
+        password: ''
+      };
+      
+      // Remove the custom header
       delete config.headers['X-Teller-Token'];
     }
   }
@@ -103,14 +134,31 @@ export interface TellerTransaction {
 // Get all accounts for an enrollment
 export async function getAccounts(accessToken: string): Promise<TellerAccount[]> {
   try {
+    console.log('Making request to Teller API to get accounts');
+    console.log('Teller API request to /accounts with token');
+    
     const response = await tellerApi.get('/accounts', {
       headers: {
         'X-Teller-Token': accessToken,
       },
     });
+    
+    console.log('Teller API response success, accounts:', response.data.length);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching Teller accounts:', error);
+    
+    // Add more detailed error logging
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received from Teller API');
+    }
+    
     throw error;
   }
 }

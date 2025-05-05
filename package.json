@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "encode-certs": "node scripts/encode-teller-certs.js"
   },
   "dependencies": {
     "@radix-ui/react-tabs": "^1.1.9",
@@ -15,7 +16,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
-    "@tanstack/react-query": "^5.75.1",
+    "@tanstack/react-query": "^5.75.2",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

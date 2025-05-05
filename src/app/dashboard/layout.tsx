@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { AccountsProvider } from '@/lib/contexts/AccountsContext';
 
 export const metadata: Metadata = {
   title: 'Dashboard - beep.money',
@@ -10,5 +11,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <AccountsProvider>
+      {children}
+    </AccountsProvider>
+  );
 } 
