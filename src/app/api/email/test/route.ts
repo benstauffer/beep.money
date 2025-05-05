@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { Resend } from 'resend';
-import SpendingReport from '@/emails/SpendingReport';
+import { SpendingReportEmail } from '@/emails/SpendingReport';
 import { GET as getSpendingSummary } from '@/app/api/spending/summary/route';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         from: 'Beep Money <hi@beep.money>',
         to: [userData.email],
         subject: '🧾 Your Spending Summary',
-        react: SpendingReport(emailData)
+        react: SpendingReportEmail(emailData)
       });
 
       // Log the email send

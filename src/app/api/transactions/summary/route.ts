@@ -66,23 +66,24 @@ export async function GET() {
           // Process transactions
           for (const tx of transactions) {
             const txDate = new Date(tx.date);
-            const amount = Math.abs(parseFloat(tx.amount)); // Convert to positive number for spending
+            const amount = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
+            const absAmount = Math.abs(amount); // Convert to positive number for spending
 
             // Only count negative amounts (spending)
-            if (parseFloat(tx.amount) < 0) {
+            if (amount < 0) {
               // Daily total (yesterday)
               if (txDate >= yesterday) {
-                dailyTotal += amount;
+                dailyTotal += absAmount;
               }
               
               // Weekly total (last 7 days)
               if (txDate >= sevenDaysAgo) {
-                weeklyTotal += amount;
+                weeklyTotal += absAmount;
               }
               
               // Monthly total (last 30 days)
               if (txDate >= thirtyDaysAgo) {
-                monthlyTotal += amount;
+                monthlyTotal += absAmount;
               }
             }
           }

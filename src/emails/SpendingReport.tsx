@@ -5,7 +5,15 @@ import { Section } from '@react-email/section';
 import { Container } from '@react-email/container';
 import { Link } from '@react-email/link';
 
-interface SpendingData {
+export interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  category?: string;
+}
+
+export interface SpendingReportEmailProps {
   firstName: string;
   dailySpend: string;
   weeklySpend: string;
@@ -14,7 +22,7 @@ interface SpendingData {
   thisMonthSpend: string;
 }
 
-export default function SpendingReport(data: SpendingData) {
+export function SpendingReportEmail(data: SpendingReportEmailProps) {
   return (
     <Html>
       <Section style={main}>
