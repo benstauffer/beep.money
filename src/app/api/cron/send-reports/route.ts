@@ -6,6 +6,14 @@ import { sendSpendingReport } from '@/lib/email';
 // This secret should be set in your environment variables for security
 const CRON_SECRET = process.env.CRON_SECRET;
 
+// Helper function to format currency
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+}
+
 export async function GET(request: Request) {
   try {
     // Verify the cron job secret to prevent unauthorized access
@@ -58,9 +66,47 @@ export async function GET(request: Request) {
           if (!report) {
             return { userId: user.id, status: 'skipped', reason: 'No report data' };
           }
+
+          // Transform report data into email props format
+          const emailData = {
+            firstName: report.firstName,
+            period: report.period,
+            dailySpend: formatCurrency(report.transactions.filter(tx => {
+              const txDate = new Date(tx.date);
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              return txDate.toDateString() === yesterday.toDateString();
+            }).reduce((sum, tx) => sum + tx.amount, 0)),
+            weeklySpend: formatCurrency(report.transactions.filter(tx => {
+              const txDate = new Date(tx.date);
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              return txDate >= sevenDaysAgo;
+            }).reduce((sum, tx) => sum + tx.amount, 0)),
+            monthlySpend: formatCurrency(report.transactions.filter(tx => {
+              const txDate = new Date(tx.date);
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              return txDate >= thirtyDaysAgo;
+            }).reduce((sum, tx) => sum + tx.amount, 0)),
+            thisWeekSpend: formatCurrency(report.transactions.filter(tx => {
+              const txDate = new Date(tx.date);
+              const weekStart = new Date();
+              weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+              weekStart.setHours(0, 0, 0, 0);
+              return txDate >= weekStart;
+            }).reduce((sum, tx) => sum + tx.amount, 0)),
+            thisMonthSpend: formatCurrency(report.transactions.filter(tx => {
+              const txDate = new Date(tx.date);
+              const monthStart = new Date();
+              monthStart.setDate(1);
+              monthStart.setHours(0, 0, 0, 0);
+              return txDate >= monthStart;
+            }).reduce((sum, tx) => sum + tx.amount, 0))
+          };
           
           // Send the email
-          await sendSpendingReport(user.email, report);
+          await sendSpendingReport(user.email, emailData);
           
           return { userId: user.id, status: 'sent' };
         } catch (error) {

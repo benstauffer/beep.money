@@ -20,6 +20,7 @@ export interface SpendingReportEmailProps {
   monthlySpend: string;
   thisWeekSpend: string;
   thisMonthSpend: string;
+  period: string;
 }
 
 export function SpendingReportEmail(data: SpendingReportEmailProps) {
